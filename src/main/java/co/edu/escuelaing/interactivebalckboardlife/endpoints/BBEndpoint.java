@@ -17,6 +17,9 @@ import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
+
+import co.edu.escuelaing.interactivebalckboardlife.BBApplicationContextAware;
+import co.edu.escuelaing.interactivebalckboardlife.repositories.TicketRepository;
 import org.springframework.stereotype.Component;
 
 
@@ -46,10 +49,32 @@ public class BBEndpoint {
         }
     }
 
+    private boolean accepted = false;
+
+    //This code allows to include a bean directly from the application context
+    TicketRepository ticketRepo = (TicketRepository)BBApplicationContextAware.getApplicationContext().getBean("ticketRepository");
+
+//    @OnMessage
+//    public void processPoint(String message, Session session) {
+//        logger.log(Level.INFO, "Point received:" + message + ". From session: " + session);
+//        this.send(message);
+//    }
+
     @OnMessage
     public void processPoint(String message, Session session) {
-        logger.log(Level.INFO, "Point received:" + message + ". From session: " + session);
-        this.send(message);
+        if (accepted) {
+            this.send(message);
+        } else {
+            if (!accepted && ticketRepo.checkTicket(message)) {
+                accepted = true;
+            }else{
+                try {
+                    ownSession.close();
+                } catch (IOException ex) {
+                    Logger.getLogger(BBEndpoint.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
     }
 
     @OnOpen
